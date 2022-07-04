@@ -25,7 +25,7 @@ describe('Lottery contract', () => {
         assert.ok(lottery.options.address);
     });
 
-    it('allows one account to enter the lottery', async()=>{
+    it('allows one account to enter the lottery', async () => {
         await lottery.methods.enter().send(
             {
                 from: accounts[0],
@@ -41,7 +41,7 @@ describe('Lottery contract', () => {
         assert.equal(1, players.length);
     });
 
-    it('ensure that multiple accounts can enter', async()=>{
+    it('ensure that multiple accounts can enter', async () => {
         await lottery.methods.enter().send(
             {
                 from: accounts[0],
@@ -71,7 +71,7 @@ describe('Lottery contract', () => {
         assert.equal(3, players.length);
     });
 
-    it('requires a minimum amount of ether to enter', async()=>{
+    it('requires a minimum amount of ether to enter', async () => {
         //Use try catch statement to make sure we get an error when
         //sending insufficient funds to enter lottery
         try {
@@ -80,8 +80,42 @@ describe('Lottery contract', () => {
                 value: 0
             });
             assert(false);
-        } catch(err){
+        } catch (err) {
             assert(err);
         }
+    });
+
+    it('only a manager can call pickWinner', async () => {
+        try {
+            await lottery.methods.pickWinner().send({
+                from: accounts[1],
+                value: web3.utils.toWei('0.02', 'ether')
+            });
+            assert(false);
+        } catch (err) {
+            assert(err);
+        }
+    });
+
+    it('sends money to enter the winner and resets the players array', async () => {
+        await lottery.methods.enter().send({
+            from: accounts[0],
+            value: web3.utils.toWei('1', 'ether')
+        });
+        // We will track the balance of the player before entering and after entering
+        // This is how we will that our player is indeed the winner
+
+        //getBalance will return the amount of ether in units of wei that a given account controls
+        const initialBalance = await web3.eth.getBalance(accounts[0]);
+
+        await lottery.methods.pickWinner().send({
+            from: accounts[0]
+        });
+
+        const finalBalance = await web3.eth.getBalance(accounts[0]);
+
+        const difference = finalBalance - initialBalance;
+
+        assert(difference > web3.utils.toWei('0.02', 'ether'));
     });
 });
